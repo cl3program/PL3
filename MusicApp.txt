@@ -1,0 +1,206 @@
+Assignment no.:
+Title :
+Batch :
+**************************************************************
+ActivityMain.java :
+
+package com.example.useraccount.music;
+
+import android.database.Cursor;
+import android.media.MediaPlayer;
+import android.os.Bundle;
+import android.provider.MediaStore;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.Toast;
+
+import java.io.IOException;
+
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, AdapterView.OnItemClickListener {
+    MediaPlayer mediaPlayer;
+
+    String[] musicList;
+    ListView listView;
+    String[] audioPath;
+    String[] songs;
+    ArrayAdapter<String> arrayAdapter;
+    FloatingActionButton fab;
+    boolean songLoaded;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        listView = (ListView) findViewById(R.id.listMusic);
+        musicList = getMusicList();
+        if(musicList == null){
+            Toast.makeText(MainActivity.this, "Error retrieving songs", Toast.LENGTH_LONG).show();
+            return ;
+        }
+        mediaPlayer = new MediaPlayer();
+        arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, musicList);
+        listView.setAdapter(arrayAdapter);
+        listView.setOnItemClickListener(this);
+        fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab.setOnClickListener(this);
+
+    }
+
+    private String[] getMusicList() {
+        final Cursor cursor = getContentResolver().query(MediaStore.Audio.Media.INTERNAL_CONTENT_URI,
+                new String[]{MediaStore.Audio.Media.DISPLAY_NAME, MediaStore.Audio.Media.DATA}, null, null,
+                "LOWER(" + MediaStore.Audio.Media.TITLE + ") ASC");
+        if (cursor == null)
+            return null;
+        int count = cursor.getCount();
+        if (count == 0)
+            return null;
+        songs = new String[count];
+        audioPath = new String[count];
+        int i = 0;
+        if(cursor.moveToFirst()){
+            do{
+                songs[i] = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME));
+                audioPath[i] = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA));
+                i++;
+            }while (cursor.moveToNext());
+        }
+        cursor.close();
+        return songs;
+    }
+    private void playSong(String path) throws IllegalArgumentException, IllegalStateException, IOException{
+        mediaPlayer.reset();
+        mediaPlayer.setDataSource(path);
+        mediaPlayer.prepare();
+        mediaPlayer.start();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings) {
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.fab:
+                try {
+                    if (mediaPlayer.isPlaying()){
+                        Snackbar.make(view, "Paused", Snackbar.LENGTH_SHORT).show();
+                        fab.setImageResource(android.R.drawable.ic_media_play);
+                        mediaPlayer.pause();
+                    }else{
+                        if(songLoaded) {
+                            fab.setImageResource(android.R.drawable.ic_media_pause);
+                            mediaPlayer.start();
+                            Snackbar.make(view, "Playing", Snackbar.LENGTH_SHORT).show();
+                        }
+                    }
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                }
+                break;
+        }
+    }
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        try{
+            playSong(audioPath[position]);
+            Snackbar.make(view, "Playing", Snackbar.LENGTH_SHORT).show();
+
+
+            songLoaded = true;
+        }catch (Exception ex){
+            ex.printStackTrace();
+        }
+    }
+}
+**************************************************************
+activity_main.xml :
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context="com.example.useraccount.music.MainActivity">
+
+    <android.support.design.widget.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:theme="@style/AppTheme.AppBarOverlay">
+
+        <android.support.v7.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            app:popupTheme="@style/AppTheme.PopupOverlay" />
+
+    </android.support.design.widget.AppBarLayout>
+
+    <include layout="@layout/content_main" />
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="@dimen/fab_margin"
+        android:src="@android:drawable/ic_media_pause" />
+
+</android.support.design.widget.CoordinatorLayout>
+**************************************************************
+content_main.xml :
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    app:layout_behavior="@string/appbar_scrolling_view_behavior"
+    tools:context="com.example.useraccount.music.MainActivity"
+    tools:showIn="@layout/activity_main">
+
+    <ListView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/listMusic" />
+</RelativeLayout>
+**************************************************************
+Output :

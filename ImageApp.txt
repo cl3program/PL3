@@ -1,0 +1,311 @@
+Assignment no:
+Title :
+Batch :
+**************************************************************
+MainActivity.java :
+package myimageapp.project.org.imageapp;
+
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.os.Bundle;
+import android.os.Environment;
+import android.support.v7.app.AppCompatActivity;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ListView;
+import android.widget.Toast;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Iterator;
+
+public class MainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener, View.OnClickListener {
+
+    File root;
+    String[] nameList;
+    Object[] obj;
+    String[] namePath;
+    ArrayList<File> fileList;
+    ArrayAdapter<String> imageNamesAdapter;
+    ListView listView;
+    Dialog dialog;
+    int superPosition = -1;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        try {
+            listView = (ListView) findViewById(R.id.listView);
+            root = new File(Environment.getExternalStorageDirectory().getAbsolutePath());
+            init();
+            listView.setOnItemClickListener(this);
+            listView.setOnItemLongClickListener(this);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void init() {
+        try {
+            namePath = null;
+            nameList = null;
+            fileList = new ArrayList<File>();
+            getNameList(root);
+            buildStrings();
+            imageNamesAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, nameList);
+            listView.setAdapter(imageNamesAdapter);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    ArrayList<File> getNameList(File dir) {
+        try {
+            File listFile[] = dir.listFiles();
+            if (listFile != null && listFile.length > 0) {
+                for (int i = 0; i < listFile.length; i++) {
+
+                    if (listFile[i].isDirectory() && !listFile[i].getName().startsWith(".")) {
+                        getNameList(listFile[i]);
+                    } else {
+                        if (listFile[i].getName().endsWith(".png") || listFile[i].getName().endsWith(".jpg") || listFile[i].getName().endsWith(".jpeg") || listFile[i].getName().endsWith(".gif")) {
+                            fileList.add(listFile[i]);
+
+                        }
+                    }
+                }
+            }
+        } catch (StackOverflowError e) {
+            e.printStackTrace();
+        }
+        return fileList;
+    }
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
+        try {
+            Intent intent = new Intent(MainActivity.this, Display.class);
+            intent.putExtra("path", namePath[position]);
+            startActivity(intent);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+        try {
+            dialog = longPressDialog();
+
+            superPosition = position;
+            dialog.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return true;
+    }
+
+    private void buildStrings() {
+        try {
+            int i = 0;
+            int size = fileList.size();
+            nameList = new String[size];
+            namePath = new String[size];
+            File temp;
+            Iterator<File> it = fileList.iterator();
+            for (i = 0; i < size; i++) {
+                temp = it.next();
+                nameList[i] = temp.getName();
+                namePath[i] = temp.getAbsolutePath();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Dialog longPressDialog() {
+        try {
+            final View layout = getLayoutInflater().inflate(R.layout.blank, null);
+            Button delete = (Button) layout.findViewById(R.id.bDelete);
+            Button rename = (Button) layout.findViewById(R.id.bRename);
+            delete.setOnClickListener(this);
+            rename.setOnClickListener(this);
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setIcon(0);
+            builder.setTitle("Delete/Rename");
+            builder.setView(layout);
+            return builder.create();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private Dialog Rename() {
+        try {
+            final View layout = getLayoutInflater().inflate(R.layout.rename, null);
+            final EditText et = (EditText) layout.findViewById(R.id.editText);
+            et.setText(nameList[superPosition].substring(0, nameList[superPosition].lastIndexOf(".")));
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setIcon(0);
+            builder.setPositiveButton("Rename", new Dialog.OnClickListener() {
+                public void onClick(DialogInterface dialog, int which) {
+                    String temp = et.getText().toString();
+                    setFileName(temp);
+                }
+            });
+            builder.setTitle("Rename");
+            builder.setView(layout);
+            return builder.create();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private void setFileName(String text) {
+        try {
+            String type = nameList[superPosition].substring(nameList[superPosition].lastIndexOf("."), nameList[superPosition].length());
+            String directory = new File(namePath[superPosition]).getParent();
+            String currentFileName = nameList[superPosition].substring(0, nameList[superPosition].lastIndexOf("."));
+
+            File from = new File(directory, currentFileName + type);
+            File to = new File(directory, text + type);
+            if (from.renameTo(to)) {
+                Toast.makeText(MainActivity.this, "File renamed", Toast.LENGTH_SHORT).show();
+                init();
+            } else {
+                Toast.makeText(MainActivity.this, "File failed to rename", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.bDelete:
+                dialog.dismiss();
+                try {
+                    File f = new File(namePath[superPosition]);
+                    boolean deleted = f.delete();
+                    if (deleted) {
+                        Toast.makeText(MainActivity.this, "File Deleted", Toast.LENGTH_SHORT).show();
+                        init();
+                    } else
+                        Toast.makeText(MainActivity.this, "File not Deleted", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                break;
+            case R.id.bRename:
+                try {
+                    dialog.dismiss();
+                    Rename().show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                break;
+        }
+    }
+}
+***********************************************************************
+Display.java :
+package myimageapp.project.org.imageapp;
+
+import android.net.Uri;
+import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.widget.ImageView;
+
+/**
+ * Created by User Account on 30-01-2016.
+ */
+public class Display extends AppCompatActivity{
+    ImageView imageView;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.image_view);
+        String s = getIntent().getStringExtra("path");
+        imageView = (ImageView) findViewById(R.id.imageView);
+        imageView.setImageURI(Uri.parse(s));
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        finish();
+    }
+}
+*********************************************************************
+activity_main.xml :
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context="myimageapp.project.org.imageapp.MainActivity">
+
+    <ListView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/listView"/>
+</RelativeLayout>
+**********************************************************************
+blank.xml :
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
+
+    <Button
+        android:id="@+id/bDelete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Delete" />
+
+    <Button
+        android:id="@+id/bRename"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Rename" />
+</LinearLayout>
+***********************************************************************
+image_view.xml :
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+<ImageView
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/imageView"/>
+</LinearLayout>
+***********************************************************************
+rename.xml :
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+<EditText
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:hint="Rename file to?"
+    android:id="@+id/editText"/>
+</LinearLayout>
+***********************************************************************
+Output :
